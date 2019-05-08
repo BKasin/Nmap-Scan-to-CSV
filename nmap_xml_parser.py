@@ -1,8 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python36
 
-__author__ = 'Jake Miller (@LaconicWolf)'
-__date__ = '20171220'
-__version__ = '0.01'
+__author__ = 'Jake Miller (@LaconicWolf) and Bailey Kasin (@BKasin)'
+__date__ = '20190327'
 __description__ = """Parses the XML output from an nmap scan. The user
                   can specify whether the data should be printed,
                   displayed as a list of IP addresses, or output to
@@ -154,61 +153,6 @@ def list_ip_addresses(data):
     addr_list = [ip for ip in sorted_set]
     return addr_list
 
-def print_web_ports(data):
-    """Examines the port information and prints out the IP and port 
-    info in URL format (https://ipaddr:port/).
-    """
-
-    # http and https port numbers came from experience as well as
-    # searching for http on th following website:
-    # https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
-    http_port_list = ['80', '280', '81', '591', '593', '2080', '2480', '3080', 
-                      '4080', '4567', '5080', '5104', '5800', '6080',
-                      '7001', '7080', '7777', '8000', '8008', '8042', '8080',
-                      '8081', '8082', '8088', '8180', '8222', '8280', '8281',
-                      '8530', '8887', '9000', '9080', '9090', '16080']                    
-    https_port_list = ['832', '981', '1311', '7002', '7021', '7023', '7025',
-                       '7777', '8333', '8531', '8888']
-    for item in data:
-        ip = item[0]
-        port = item[4]
-        if port.endswith('43') and port != "143" or port in https_port_list:
-            print("https://{}:{}".format(ip, port))
-        elif port in http_port_list:
-            print("http://{}:{}".format(ip, port))
-        else:
-            continue    
-    
-def least_common_ports(data, n):
-    """Examines the port index from data and prints the least common ports."""
-    c = Counter()
-    for item in data:
-        try:
-            port = item[4]
-            c.update([port])
-        except IndexError as e:
-            if args.debug:
-                print(e)
-            continue
-    print("{0:8} {1:15}\n".format('PORT', 'OCCURENCES'))
-    for p in c.most_common()[:-n-1:-1]:
-        print("{0:5} {1:8}".format(p[0], p[1]))
-
-def most_common_ports(data, n):
-    """Examines the port index from data and prints the most common ports."""
-    c = Counter()
-    for item in data:
-        try:
-            port = item[4]
-            c.update([port])
-        except IndexError as e:
-            if args.debug:
-                print(e)
-            continue
-    print("{0:8} {1:15}\n".format('PORT', 'OCCURENCES'))
-    for p in c.most_common(n):
-        print("{0:5} {1:8}".format(p[0], p[1]))
-
 def print_filtered_port(data, filtered_port):
     """Examines the port index from data and see if it matches the 
     filtered_port. If it matches, print the IP address.
@@ -265,14 +209,6 @@ def main():
             print_data(data)
         if args.filter_by_port:
             print_filtered_port(data, args.filter_by_port)
-        if args.print_web_ports:
-            print_web_ports(data)
-        if args.least_common_ports:
-            print("\n{} LEAST COMMON PORTS".format(filename.upper()))
-            least_common_ports(data, args.least_common_ports)
-        if args.most_common_ports:
-            print("\n{} MOST COMMON PORTS".format(filename.upper()))
-            most_common_ports(data, args.most_common_ports)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -285,27 +221,18 @@ if __name__ == '__main__':
     parser.add_argument("-p", "--print_all",
                         help="Display scan information to the screen", 
                         action="store_true")
-    parser.add_argument("-pw", "--print_web_ports",
-                        help="Display IP addresses/ports in URL format "
-                             "(http://ipaddr:port)",
-                        action="store_true")
     parser.add_argument("-ip", "--ip_addresses",
                         help="Display a list of ip addresses",
                         action="store_true")
-    parser.add_argument("-csv", "--csv",
+    parser.add_argument("-o", "--csv",
                         nargs='?', const='scan.csv',
                         help="Specify the name of a csv file to write to. "
                              "If the file already exists it will be appended")
     parser.add_argument("-f", "--filename",
-                        nargs='*',
+                        action='append',
                         help="Specify a file containing the output of an nmap "
-                             "scan in xml format.")
-    parser.add_argument("-lc","--least_common_ports",
-                        type=int, 
-                        help="Displays the least common open ports.")
-    parser.add_argument("-mc", "--most_common_ports",
-                        type=int, 
-                        help="Displays the most common open ports.")
+                             "scan in xml format. Can be passed several times "
+                             "to scan several files into one CSV")
     parser.add_argument("-fp", "--filter_by_port", 
                         help="Displays the IP addresses that are listenting on "
                              "a specified port")
@@ -321,10 +248,9 @@ if __name__ == '__main__':
               "Use -f <nmap_scan.xml> to specify the file\n")
         exit()
     if not args.ip_addresses and not args.csv and not args.print_all \
-                and not args.print_web_ports and not args.least_common_ports \
-                and not args.most_common_ports and not args.filter_by_port:
+                            and not args.filter_by_port:
         parser.print_help()
-        print("\n[-] Please choose an output option. Use -csv, -ip, or -p\n")
+        print("\n[-] Please choose an output option. Use -o, -ip, or -p\n")
         exit()
     csv_name = args.csv
     main()
